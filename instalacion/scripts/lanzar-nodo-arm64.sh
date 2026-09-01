@@ -4,9 +4,11 @@
 # Autor:       MC. René Solis R. — Docente, TecNM Campus Tijuana
 # Curso:       Programación Lógica y Funcional (ISC-2006) — Ago–Dic 2026
 # Actividad:   Instalación — nodo AWS Academy
-# Fecha:       2026-07-18
+# Fecha:       2026-07-18  (rev. 2026-09-01: disco root 30 GB gp3 + swap 4 GB vía user-data)
 # Descripción: Lanza la instancia EC2 ARM64 (key pair, security group, AMI Ubuntu 24.04) desde CloudShell
 # IA:          Generado con Claude Code, verificado y modificado por el docente
+# Ajustes:     INSTANCE_TYPE / ROOT_GB / SWAP_GB son overrideables por variable de entorno
+#              ej: INSTANCE_TYPE=t4g.small ROOT_GB=40 ./lanzar-nodo-arm64.sh
 # =====================================================================
 # ==========================================
 # Script: lanzar-nodo-arm64.sh
@@ -37,8 +39,17 @@ export AWS_DEFAULT_REGION=us-east-1
 KEY_NAME="llavesita"
 SG_NAME="arm64-ssh-group"
 DESC="Programacion Logica y Funcional - ARM64"
-INSTANCE_TYPE="t4g.micro"
+
+# Arquitectura: ARM64 (Graviton). Los 6 lenguajes del curso tienen soporte
+# aarch64 completo en Ubuntu 24.04 y t4g cuesta ~20% menos que t3.
+#   t4g.micro  = 1 GiB  -> Prolog/Erlang/Elixir/OCaml OK; Haskell/Clojure solo REPL
+#   t4g.small  = 2 GiB  -> recomendado si el nodo lo comparten varios o se compila Haskell
+INSTANCE_TYPE="${INSTANCE_TYPE:-t4g.micro}"
 INSTANCE_NAME="Curso PLF"
+
+# Disco root y swap (ghcup ~5GB + opam ~2GB + JVM/BEAM no caben en los 8 GB por defecto)
+ROOT_GB="${ROOT_GB:-30}"
+SWAP_GB="${SWAP_GB:-4}"
 
 echo "===== 1. Key Pair ====="
 
@@ -120,7 +131,31 @@ AMI_ID=$(aws ec2 describe-images \
 
 echo "AMI: $AMI_ID"
 
-echo "===== 7. Lanzar instancia ====="
+# Nombre del dispositivo root real de la AMI (Ubuntu suele ser /dev/sda1)
+ROOT_DEV=$(aws ec2 describe-images \
+  --image-ids $AMI_ID \
+  --query "Images[0].RootDeviceName" \
+  --output text)
+
+echo "===== 7. user-data (swap + tuning) ====="
+cat > user-data.sh << EOF
+#!/bin/bash
+set -e
+# --- swap de ${SWAP_GB} GiB: evita OOM al compilar GHC/opam o al correr la JVM ---
+if [ ! -f /swapfile ]; then
+  fallocate -l ${SWAP_GB}G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=\$((${SWAP_GB}*1024))
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+# menos agresivo al swapear: usar RAM mientras haya
+sysctl -w vm.swappiness=10
+echo 'vm.swappiness=10' > /etc/sysctl.d/99-plf-swap.conf
+apt-get update -y
+EOF
+
+echo "===== 8. Lanzar instancia ====="
 INSTANCE_ID=$(aws ec2 run-instances \
   --image-id $AMI_ID \
   --count 1 \
@@ -129,16 +164,18 @@ INSTANCE_ID=$(aws ec2 run-instances \
   --security-group-ids $SG_ID \
   --subnet-id $SUBNET_ID \
   --associate-public-ip-address \
+  --block-device-mappings "[{\"DeviceName\":\"$ROOT_DEV\",\"Ebs\":{\"VolumeSize\":$ROOT_GB,\"VolumeType\":\"gp3\",\"DeleteOnTermination\":true}}]" \
+  --user-data file://user-data.sh \
   --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value='$INSTANCE_NAME'}]" \
   --query 'Instances[0].InstanceId' \
   --output text)
 
-echo "Instancia: $INSTANCE_ID"
+echo "Instancia: $INSTANCE_ID ($INSTANCE_TYPE, root ${ROOT_GB}GB gp3, swap ${SWAP_GB}GB)"
 
-echo "===== 8. Esperando ====="
+echo "===== 9. Esperando ====="
 aws ec2 wait instance-running --instance-ids $INSTANCE_ID
 
-echo "===== 9. IP pública ====="
+echo "===== 10. IP pública ====="
 PUBLIC_IP=$(aws ec2 describe-instances \
   --instance-ids $INSTANCE_ID \
   --query "Reservations[0].Instances[0].PublicIpAddress" \
@@ -148,3 +185,6 @@ echo "IP: $PUBLIC_IP"
 
 echo "===== SSH ====="
 echo "ssh -i ${KEY_NAME}.pem ubuntu@$PUBLIC_IP"
+echo
+echo "El user-data crea el swap en el primer arranque (~1 min). Verifica con:"
+echo "  ssh -i ${KEY_NAME}.pem ubuntu@$PUBLIC_IP 'free -h && df -h /'"
