@@ -71,6 +71,9 @@ ssh -i llavesita.pem ubuntu@<IP_PUBLICA>
 ssh -i llavesita.pem ubuntu@<IP_PUBLICA>
 ```
 
+> 💻 ¿Prefieres conectarte desde VS Code o desde una app en el celular (Termius)
+> en vez de escribir `ssh` en CloudShell? Ve el [Anexo A](#anexo-a--descargar-llavesitapem-y-conectarte-con-vs-code-o-termius).
+
 Verifica que estás en ARM64:
 
 ```bash
@@ -102,6 +105,97 @@ lo pida:
 - [05_clojure.md](05_clojure.md) — Clojure
 - [06_elixir.md](06_elixir.md) — Elixir
 - [07_ocaml.md](07_ocaml.md) — OCaml
+
+## Anexo A — Descargar `llavesita.pem` y conectarte con VS Code o Termius
+
+El script deja `llavesita.pem` **dentro de CloudShell**. Para conectarte desde tu
+propia PC o tu celular (en vez de escribir `ssh` en CloudShell) necesitas sacar
+esa llave a tu equipo.
+
+> 🔑 `llavesita.pem` es una **llave privada**: vale lo mismo que una contraseña.
+> No la subas a GitHub, no la mandes por WhatsApp/Telegram/correo, no la pegues
+> en un Gist público. Si se te pierde o se filtra, corre el script otra vez: crea
+> una nueva e invalida la anterior.
+
+### A.1 · Sacar la llave de CloudShell
+
+**Opción 1 — Descargar archivo (PC).**
+En CloudShell, menú **Actions** (arriba a la derecha) → **Download file** → escribe
+la ruta:
+
+```
+llavesita.pem
+```
+
+Se guarda en la carpeta *Descargas* de tu navegador.
+
+**Opción 2 — Copiar y pegar (sirve para celular).**
+En CloudShell:
+
+```bash
+cat llavesita.pem
+```
+
+Selecciona **todo** el bloque, desde `-----BEGIN ... PRIVATE KEY-----` hasta
+`-----END ... PRIVATE KEY-----` inclusive, y cópialo. Lo pegarás directo en la app
+(A.4). Así evitas mandar el archivo por apps de mensajería.
+
+### A.2 · Permisos de la llave (solo PC)
+
+SSH rechaza una llave con permisos abiertos.
+
+```bash
+# macOS / Linux
+mkdir -p ~/.ssh && mv ~/Downloads/llavesita.pem ~/.ssh/
+chmod 400 ~/.ssh/llavesita.pem
+```
+
+```powershell
+# Windows (PowerShell) — Windows 10/11 ya trae ssh, no necesitas PuTTY
+mkdir $HOME\.ssh -Force
+move $HOME\Downloads\llavesita.pem $HOME\.ssh\
+icacls $HOME\.ssh\llavesita.pem /inheritance:r /grant:r "$($env:USERNAME):(R)"
+```
+
+### A.3 · VS Code — extensión Remote-SSH
+
+1. Instala la extensión **Remote - SSH** (`ms-vscode-remote.remote-ssh`).
+2. Deja la llave en `~/.ssh/llavesita.pem` con `chmod 400` (A.2).
+3. Agrega este bloque a `~/.ssh/config` (créalo si no existe):
+
+   ```
+   Host plf-nodo
+       HostName <IP_PUBLICA>
+       User ubuntu
+       IdentityFile ~/.ssh/llavesita.pem
+       IdentitiesOnly yes
+       StrictHostKeyChecking accept-new
+   ```
+
+4. `F1` → **Remote-SSH: Connect to Host…** → `plf-nodo`. Se abre una ventana de
+   VS Code trabajando *dentro* del nodo: editor, terminal y explorador de archivos.
+5. **Cada sesión del Learner Lab la IP pública cambia.** Solo actualiza la línea
+   `HostName` con la IP nueva (la ves con el comando de la tabla de abajo).
+
+### A.4 · Termius — iPhone / Android / escritorio
+
+1. **Keychain** (llavero) → **New Key**:
+   - *Private key*: pega el contenido de `llavesita.pem` (Opción 2 de A.1), o
+     importa el archivo si lo pasaste al teléfono por AirDrop / Google Drive.
+   - *Passphrase*: déjalo vacío.
+   - Nómbrala `llavesita`.
+2. **Hosts** → **New Host**:
+   - *Address*: `<IP_PUBLICA>`
+   - *Username*: `ubuntu`
+   - *Key*: `llavesita`
+3. Toca el host para conectar.
+4. Igual que en VS Code: al reiniciar el lab, edita el campo *Address* con la IP
+   nueva.
+
+### A.5 · Al terminar el curso
+
+Borra `llavesita.pem` de todos tus dispositivos y elimina la llave del llavero de
+Termius / de `~/.ssh/`. La llave del lab deja de servir cuando vencen los créditos.
 
 ## Notas operativas
 
