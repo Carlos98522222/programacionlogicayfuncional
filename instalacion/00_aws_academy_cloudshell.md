@@ -192,7 +192,34 @@ icacls $HOME\.ssh\llavesita.pem /inheritance:r /grant:r "$($env:USERNAME):(R)"
 4. Igual que en VS Code: al reiniciar el lab, edita el campo *Address* con la IP
    nueva.
 
-### A.5 · Al terminar el curso
+### A.6 · Cyberduck — transferencias con interfaz gráfica
+
+[Cyberduck](https://cyberduck.io) (gratis, código abierto, macOS/Windows) es un
+cliente **SFTP/S3** con ventana de arrastrar-y-soltar, útil para mover carpetas
+grandes entre tu PC y el nodo sin escribir comandos `scp`.
+
+> Descárgalo **solo** de `cyberduck.io`, la Microsoft Store o la Mac App Store
+> (`brew install --cask cyberduck` en macOS). Otros dominios son espejos no
+> oficiales.
+
+- **Conectar al nodo:** *Open Connection* → protocolo **SFTP** → Server
+  `<IP_PUBLICA>`, Username `ubuntu`, y en *More Options* → **SSH Private Key**
+  elige `llavesita.pem`. Sin contraseña.
+- **Google Drive / S3:** también los abre como marcadores (*Open Connection* →
+  Google Drive / Amazon S3), práctico para respaldar tu código al cierre del
+  curso.
+
+**Límites que conviene conocer:**
+
+- Cyberduck **lista y transfiere**; no monta el nodo como disco local. Para eso
+  existe **Mountain Duck** (de pago, ~$39), que con directorios de miles de
+  archivos se vuelve lento.
+- Con Google Drive la API es lenta para operaciones masivas y los Google Docs se
+  exportan (no son archivos reales). Para sincronización grande hacia Drive/S3 es
+  mejor **[rclone](https://rclone.org)** (gratis, scriptable, con reintentos y
+  paralelismo). Para montar el nodo como carpeta desde Linux/macOS: `sshfs`.
+
+### A.7 · Al terminar el curso
 
 Borra `llavesita.pem` de todos tus dispositivos y elimina la llave del llavero de
 Termius / de `~/.ssh/`. La llave del lab deja de servir cuando vencen los créditos.
