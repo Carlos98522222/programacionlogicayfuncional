@@ -116,6 +116,11 @@ Este ejemplo demuestra cómo ambos conceptos **coexisten**: `let` liga el nombre
 ---
 
 ## 📚 Referencias sugeridas
-- Abelson, H. & Sussman, G. J. — *Structure and Interpretation of Computer Programs (SICP)*.
-- Documentación oficial de Scheme/Racket sobre `let`, `letrec` y `set!`.
-- Sussman, G. J. — Notas sobre semántica de lenguajes de programación (MIT 6.001).
+
+[1] H. Abelson and G. J. Sussman, *Structure and Interpretation of Computer Programs*, 2nd ed. Cambridge, MA, USA: MIT Press, 1996.
+
+[2] Racket Documentation, "let, let*, and letrec," *Racket Reference*. [Online]. Disponible en: https://docs.racket-lang.org/reference/let.html. [Accedido: 1-sep-2026].
+
+[3] Racket Documentation, "set!," *Racket Reference*. [Online]. Disponible en: https://docs.racket-lang.org/reference/set_.html. [Accedido: 1-sep-2026].
+
+[4] G. J. Sussman, "6.001 Structure and Interpretation of Computer Programs," *MIT OpenCourseWare*, Massachusetts Institute of Technology, Cambridge, MA, USA, 2005. [Online]. Disponible en: https://ocw.mit.edu/. [Accedido: 1-sep-2026].
