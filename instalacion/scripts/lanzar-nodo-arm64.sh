@@ -126,6 +126,25 @@ aws ec2 authorize-security-group-ingress \
   --port 22 \
   --cidr 0.0.0.0/0 2>/dev/null
 
+echo "===== 4b. Erlang distribuido: EPMD + rango de nodos ====="
+# Solo necesario para practicas multi-nodo (unidad 4 / proyecto final).
+# Origen restringido al propio security group: NO exponer a Internet, porque
+# un nodo distribuido con cookie conocida permite ejecucion remota de codigo.
+# EPMD (Erlang Port Mapper Daemon)
+aws ec2 authorize-security-group-ingress \
+  --group-id $SG_ID \
+  --protocol tcp \
+  --port 4369 \
+  --source-group $SG_ID 2>/dev/null
+# Rango fijo para la comunicacion entre nodos. Debe coincidir con los flags
+# -kernel inet_dist_listen_min 9100 inet_dist_listen_max 9105 al arrancar erl
+# (ver instalacion/03_erlang.md).
+aws ec2 authorize-security-group-ingress \
+  --group-id $SG_ID \
+  --protocol tcp \
+  --port 9100-9105 \
+  --source-group $SG_ID 2>/dev/null
+
 echo "===== 5. Subnet ====="
 SUBNET_ID=$(aws ec2 describe-subnets \
   --filters "Name=default-for-az,Values=true" \

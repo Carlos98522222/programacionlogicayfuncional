@@ -82,6 +82,54 @@ erl -noshell -eval '
   halt().'
 ```
 
+## Erlang distribuido: puertos y flag de rango fijo
+
+Para prácticas **básicas e intermedias en un solo nodo** (REPL, `spawn`, paso de
+mensajes, `gen_server`, supervisores) basta con `tcp/22`: todo ocurre dentro de
+la BEAM y no toca la red.
+
+Cuando pases a **Erlang distribuido** (varios nodos, `erl -name`,
+`net_adm:ping/1`, nodos en distintas VMs) necesitas abrir:
+
+| Puerto | Uso |
+|--------|-----|
+| `TCP/4369` | EPMD — Erlang Port Mapper Daemon (no usa UDP) |
+| `TCP/9100-9105` | Rango fijo para la conexión entre nodos |
+
+Por defecto el puerto de conexión entre nodos es **efímero/dinámico**, así que
+no se puede abrir en el firewall. Se fija con flags de `kernel`:
+
+```bash
+erl -name nodo1@10.0.0.5 -setcookie curso \
+    -kernel inet_dist_listen_min 9100 \
+    -kernel inet_dist_listen_max 9105
+```
+
+En `sys.config` (proyectos rebar3 / releases):
+
+```erlang
+{kernel, [
+  {inet_dist_listen_min, 9100},
+  {inet_dist_listen_max, 9105}
+]}
+```
+
+El rango de los flags debe coincidir con el que abre el security group en
+`instalacion/scripts/lanzar-nodo-arm64.sh` (sección `4b`). Ese script restringe
+el origen al propio security group: **nunca expongas EPMD a `0.0.0.0/0`** — un
+nodo distribuido con la cookie conocida permite ejecución remota de código.
+
+Verificación entre dos nodos de la misma VPC:
+
+```bash
+# VM A
+erl -name a@<IP_A> -setcookie curso -kernel inet_dist_listen_min 9100 inet_dist_listen_max 9105
+# VM B
+erl -name b@<IP_B> -setcookie curso -kernel inet_dist_listen_min 9100 inet_dist_listen_max 9105
+(b@<IP_B>)1> net_adm:ping('a@<IP_A>').
+pong
+```
+
 ## rebar3 (herramienta de builds, para los proyectos OTP)
 
 ```bash
