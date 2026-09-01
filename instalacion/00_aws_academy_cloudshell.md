@@ -309,7 +309,7 @@ de inmediato. Selecciona la instancia → botón **Instance state** →
 
 | Situación | Qué hacer |
 |-----------|-----------|
-| Listar / apagar / encender / borrar la VM | Ver el [Anexo B](#anexo-b--t%C3%BA-tienes-el-control-de-la-vm) |
+| Listar / apagar / encender / borrar la VM | Ver el [Anexo B](#anexo-b--tú-tienes-el-control-de-la-vm) |
 | La IP cambió tras reiniciar el lab | `aws ec2 describe-instances --filters Name=tag:Name,Values=Curso-PLF --query "Reservations[].Instances[].PublicIpAddress" --output text` |
 | Perdiste `llavesita.pem` | Vuelve a correr el script: detecta la key huérfana y la recrea |
 | `t4g.micro` (1 GB RAM) se queda corto al compilar | Ya trae swap de 4 GB; si aún así falla, `INSTANCE_TYPE=t4g.small ./lanzar-nodo-arm64.sh` |
