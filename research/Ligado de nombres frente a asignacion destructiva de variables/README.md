@@ -1,3 +1,5 @@
+![Portada](imagen1portada.png)
+
 # Ligado de Nombres frente a Asignación Destructiva de Variables
 
 ### Nombre y apellido: Garcia Caro Carlos Alejandro
