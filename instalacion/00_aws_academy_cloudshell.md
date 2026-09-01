@@ -197,14 +197,96 @@ icacls $HOME\.ssh\llavesita.pem /inheritance:r /grant:r "$($env:USERNAME):(R)"
 Borra `llavesita.pem` de todos tus dispositivos y elimina la llave del llavero de
 Termius / de `~/.ssh/`. La llave del lab deja de servir cuando vencen los créditos.
 
+## Anexo B — Tú tienes el control de la VM
+
+Tu instancia **no desaparece** cuando cierras el lab: solo se **detiene**. Puedes
+listarla, apagarla, encenderla y borrarla cuando quieras, todo desde CloudShell.
+El script la crea con la etiqueta `Name=Curso-PLF`, así que **no dependes del ID
+aleatorio** (`i-0abc123…`) que asigna AWS ni de los nombres sin sentido de la
+consola: siempre te refieres a ella por su etiqueta.
+
+### B.1 · Listar tus VMs
+
+```bash
+aws ec2 describe-instances \
+  --filters "Name=tag:Name,Values=Curso-PLF" \
+  --query "Reservations[].Instances[].{ID:InstanceId,Nombre:Tags[?Key=='Name']|[0].Value,Estado:State.Name,Tipo:InstanceType,IP:PublicIpAddress}" \
+  --output table
+```
+
+Salida típica:
+
+```
+------------------------------------------------------------------------
+|                          DescribeInstances                           |
++----------------------+-----------+------------+------------+----------+
+|         ID           |  Nombre   |  Estado    |    Tipo    |    IP    |
++----------------------+-----------+------------+------------+----------+
+|  i-0a1b2c3d4e5f6a7b8 | Curso-PLF | running    | t4g.micro  | 3.9.1.2  |
++----------------------+-----------+------------+------------+----------+
+```
+
+Para ver **todas** tus instancias (por si creaste varias), quita la línea
+`--filters`.
+
+Guarda el ID en una variable para los comandos siguientes:
+
+```bash
+ID=$(aws ec2 describe-instances \
+  --filters "Name=tag:Name,Values=Curso-PLF" "Name=instance-state-name,Values=running,stopped" \
+  --query "Reservations[0].Instances[0].InstanceId" --output text)
+echo $ID
+```
+
+### B.2 · Apagar (para no gastar crédito)
+
+Una instancia **detenida no cobra cómputo** (solo el disco, ~$2.40/mes por 30 GB).
+Apágala cuando termines de trabajar:
+
+```bash
+aws ec2 stop-instances --instance-ids $ID
+```
+
+### B.3 · Encender de nuevo
+
+```bash
+aws ec2 start-instances --instance-ids $ID
+
+# la IP pública cambió: pídela otra vez
+aws ec2 describe-instances --instance-ids $ID \
+  --query "Reservations[0].Instances[0].PublicIpAddress" --output text
+```
+
+> El disco, tu código y el software instalado **se conservan** entre apagar y
+> encender. Lo único que cambia es la IP pública.
+
+### B.4 · Borrar la VM (terminate)
+
+Esto **destruye** la instancia y su disco (con `DeleteOnTermination:true`). Úsalo
+si algo quedó mal y prefieres empezar de cero, o al final del curso:
+
+```bash
+aws ec2 terminate-instances --instance-ids $ID
+```
+
+Después puedes volver a correr `lanzar-nodo-arm64.sh` para crear una nueva desde
+cero.
+
+### B.5 · Desde la consola web (alternativa gráfica)
+
+**EC2 → Instances**. Como tienen la columna *Name* = `Curso-PLF`, las localizas
+de inmediato. Selecciona la instancia → botón **Instance state** →
+*Stop / Start / Terminate*.
+
 ## Notas operativas
 
 | Situación | Qué hacer |
 |-----------|-----------|
-| La IP cambió tras reiniciar el lab | `aws ec2 describe-instances --query "Reservations[].Instances[].PublicIpAddress"` en CloudShell |
+| Listar / apagar / encender / borrar la VM | Ver el [Anexo B](#anexo-b--t%C3%BA-tienes-el-control-de-la-vm) |
+| La IP cambió tras reiniciar el lab | `aws ec2 describe-instances --filters Name=tag:Name,Values=Curso-PLF --query "Reservations[].Instances[].PublicIpAddress" --output text` |
 | Perdiste `llavesita.pem` | Vuelve a correr el script: detecta la key huérfana y la recrea |
-| `t4g.micro` (1 GB RAM) se queda corto al compilar | Agrega swap (ver [03_erlang.md](03_erlang.md)) o usa `t4g.small` editando `INSTANCE_TYPE` en el script |
-| Terminaste la sesión | **End Lab** en Learner Lab; la instancia queda detenida, no borrada |
+| `t4g.micro` (1 GB RAM) se queda corto al compilar | Ya trae swap de 4 GB; si aún así falla, `INSTANCE_TYPE=t4g.small ./lanzar-nodo-arm64.sh` |
+| Terminaste la sesión | Apaga la VM (Anexo B.2) y **End Lab** en Learner Lab; la instancia queda detenida, no borrada |
 
 > 💰 Tu presupuesto es de **$50 USD**, asignados por el docente al inicio del
 > semestre. `t4g.micro` cuesta ≈ $0.0084/hora — apaga el lab al terminar.

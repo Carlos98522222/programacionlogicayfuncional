@@ -4,7 +4,8 @@
 # Autor:       MC. René Solis R. — Docente, TecNM Campus Tijuana
 # Curso:       Programación Lógica y Funcional (ISC-2006) — Ago–Dic 2026
 # Actividad:   Instalación — nodo AWS Academy
-# Fecha:       2026-07-18  (rev. 2026-09-01: disco root 30 GB gp3 + swap 4 GB vía user-data)
+# Fecha:       2026-07-18  (rev. 2026-09-01: disco root 30 GB gp3 + swap 4 GB vía
+#              user-data; tag Name en instancia y volumen; comandos de gestión)
 # Descripción: Lanza la instancia EC2 ARM64 (key pair, security group, AMI Ubuntu 24.04) desde CloudShell
 # IA:          Generado con Claude Code, verificado y modificado por el docente
 # Ajustes:     INSTANCE_TYPE / ROOT_GB / SWAP_GB son overrideables por variable de entorno
@@ -45,7 +46,16 @@ DESC="Programacion Logica y Funcional - ARM64"
 #   t4g.micro  = 1 GiB  -> Prolog/Erlang/Elixir/OCaml OK; Haskell/Clojure solo REPL
 #   t4g.small  = 2 GiB  -> recomendado si el nodo lo comparten varios o se compila Haskell
 INSTANCE_TYPE="${INSTANCE_TYPE:-t4g.micro}"
-INSTANCE_NAME="Curso PLF"
+
+# Etiqueta (tag "Name") con la que se ve la VM en la consola EC2. SIN espacios:
+# así el valor no queda con comillas raras y es fácil de filtrar por CLI.
+# EC2 no pone nombre por defecto -> sin este tag la instancia sale en blanco y
+# solo se distingue por su ID aleatorio (i-0abc...). Overrideable por entorno.
+INSTANCE_NAME="${INSTANCE_NAME:-Curso-PLF}"
+
+# Tags que se aplican TANTO a la instancia como a su disco (volumen EBS),
+# para que ninguno de los dos aparezca sin nombre en la consola.
+TAGS="{Key=Name,Value=$INSTANCE_NAME},{Key=Curso,Value=ISC-2006-PLF},{Key=Proyecto,Value=programacion-logica-y-funcional}"
 
 # Disco root y swap (ghcup ~5GB + opam ~2GB + JVM/BEAM no caben en los 8 GB por defecto)
 ROOT_GB="${ROOT_GB:-30}"
@@ -166,11 +176,13 @@ INSTANCE_ID=$(aws ec2 run-instances \
   --associate-public-ip-address \
   --block-device-mappings "[{\"DeviceName\":\"$ROOT_DEV\",\"Ebs\":{\"VolumeSize\":$ROOT_GB,\"VolumeType\":\"gp3\",\"DeleteOnTermination\":true}}]" \
   --user-data file://user-data.sh \
-  --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value='$INSTANCE_NAME'}]" \
+  --tag-specifications \
+      "ResourceType=instance,Tags=[$TAGS]" \
+      "ResourceType=volume,Tags=[$TAGS]" \
   --query 'Instances[0].InstanceId' \
   --output text)
 
-echo "Instancia: $INSTANCE_ID ($INSTANCE_TYPE, root ${ROOT_GB}GB gp3, swap ${SWAP_GB}GB)"
+echo "Instancia: $INSTANCE_ID  Name=$INSTANCE_NAME  ($INSTANCE_TYPE, root ${ROOT_GB}GB gp3, swap ${SWAP_GB}GB)"
 
 echo "===== 9. Esperando ====="
 aws ec2 wait instance-running --instance-ids $INSTANCE_ID
@@ -188,3 +200,9 @@ echo "ssh -i ${KEY_NAME}.pem ubuntu@$PUBLIC_IP"
 echo
 echo "El user-data crea el swap en el primer arranque (~1 min). Verifica con:"
 echo "  ssh -i ${KEY_NAME}.pem ubuntu@$PUBLIC_IP 'free -h && df -h /'"
+echo
+echo "Gestión de esta VM (por su etiqueta Name=$INSTANCE_NAME):"
+echo "  Ver estado : aws ec2 describe-instances --filters Name=tag:Name,Values=$INSTANCE_NAME --query 'Reservations[].Instances[].[InstanceId,State.Name,PublicIpAddress]' --output table"
+echo "  Apagar     : aws ec2 stop-instances  --instance-ids $INSTANCE_ID"
+echo "  Encender   : aws ec2 start-instances --instance-ids $INSTANCE_ID"
+echo "  Borrar     : aws ec2 terminate-instances --instance-ids $INSTANCE_ID"
