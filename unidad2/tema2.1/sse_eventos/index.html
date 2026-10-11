@@ -15,13 +15,13 @@
   h2 { font-size:14px; margin:0 0 6px; }
   .stats { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:8px; } b { font-variant-numeric:tabular-nums; }
   ul { list-style:none; margin:0; padding:0; max-height:55vh; overflow:auto; font-size:13px; }
-  li { padding:3px 0; border-bottom:1px solid var(--line); } .ok{color:var(--ok)} .alerta{color:var(--alerta)} .sos{color:var(--sos);font-weight:700}
+  li { padding:3px 0; border-bottom:1px solid var(--line); } li.hist { color:var(--mut); font-style:italic; } .ok{color:var(--ok)} .alerta{color:var(--alerta)} .sos{color:var(--sos);font-weight:700}
   @media (max-width:700px) { main { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
 <header><h1>El mismo evento, dos formas de enterarse</h1>
-<span class="k">Latencia = hora en que el navegador lo ve − hora en que el servidor lo publicó (misma máquina).</span></header>
+<span class="k">Latencia = hora en que el navegador lo ve − hora en que el servidor lo publicó (misma máquina). Los eventos anteriores a abrir la página salen en gris (“repuesto”) y no cuentan.</span></header>
 <main>
   <section><h2>SSE (el servidor empuja) <span id="est" class="k">conectando…</span></h2>
     <div class="stats"><span><span class="k">eventos</span> <b id="sn">0</b></span>
@@ -33,16 +33,21 @@
       <span><span class="k">peticiones HTTP</span> <b id="pp">0</b></span></div><ul id="pul"></ul></section>
 </main>
 <script>
+const t0 = Date.now();                       // lo publicado ANTES de abrir la página es "repuesto", no latencia
 function panel(prefix) {
   const vistos = new Set(); let n = 0, suma = 0;
   return function (ev) {
     if (vistos.has(ev.id)) return; vistos.add(ev.id);
-    const lat = Date.now() - ev.t; n++; suma += lat;
-    document.getElementById(prefix + 'n').textContent = n;
-    document.getElementById(prefix + 'l').textContent = Math.round(suma / n);
-    const li = document.createElement('li'); li.className = ev.tipo;
-    li.textContent = '#' + ev.id + ' · ' + ev.tipo + ' · ' + ev.texto + ' · ' + lat + ' ms';
-    const ul = document.getElementById(prefix + 'ul'); ul.prepend(li);
+    const lat = Date.now() - ev.t;
+    const hist = ev.t < t0;
+    if (!hist) {
+      n++; suma += lat;
+      document.getElementById(prefix + 'n').textContent = n;
+      document.getElementById(prefix + 'l').textContent = Math.round(suma / n);
+    }
+    const li = document.createElement('li'); li.className = hist ? 'hist' : ev.tipo;
+    li.textContent = '#' + ev.id + ' · ' + ev.tipo + ' · ' + ev.texto + ' · ' + (hist ? 'repuesto (publicado antes de abrir)' : lat + ' ms');
+    document.getElementById(prefix + 'ul').prepend(li);
   };
 }
 const verSse = panel('s'), verPoll = panel('p');
