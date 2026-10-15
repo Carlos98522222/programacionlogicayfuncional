@@ -23,6 +23,7 @@ una instancia EC2 Graviton (AWS Academy) o en hardware físico (Raspberry Pi).
 | 7 | [07_ocaml.md](07_ocaml.md) | OCaml (opam) | 4.14 (switch default) · 5.x opcional |
 | 8 | [08_raspberry_pi_zero2w.md](08_raspberry_pi_zero2w.md) | Prolog + Erlang en Raspberry Pi Zero 2W | script automatizado |
 | 9 | [09_erlang_termux.md](09_erlang_termux.md) | Erlang/OTP + rebar3 en Termux (Android) | OTP 29 · rebar3 3.27 |
+| 10 | [10_erlang_ish.md](10_erlang_ish.md) | Erlang/OTP + rebar3 en iSH (iPhone/iPad) | borrador sin verificar |
 
 ## Scripts
 
