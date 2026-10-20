@@ -64,7 +64,7 @@ Salida esperada:
 
 ## Diapositivas
 
-- `slides.pdf` — 5–8 diapositivas, subir a esta carpeta **antes** de la sesión.
+- [Ver presentación de Elixir (PDF)](./slides.pdf)
 
 ## Bibliografía (IEEE)
 
